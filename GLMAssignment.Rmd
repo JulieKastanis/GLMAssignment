@@ -16,38 +16,37 @@ library(ggplot2)
 library(data.table)
 library(ggfortify)
 ```
-
-
 ## R Markdown
-
+t.test
 This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
 
 
-```{r import Sex_Sat}
-library(readr)
-Sex_Sat <- read_csv("data/Sex_Sat.csv")
-```
 <span style="color:blue">First, lets make a simple graph using some base R code.</span>
 
-```{r Scatter Sex_Sat}
-ggplot(Sex_Sat, aes(x = Sex, y = AverageSat, shape = Sex, color = Sex)) +
-	geom_point(size = 5) +
-	xlab("Sex") +
-	ylab("Band Saturation") +
-theme(
-	axis.title.x = element_text(colour = "cornflowerblue", size =rel(2)),
-	axis.text.x = element_text(angle = 0, size = 13, vjust = 0.5)) +
-  theme(
-	axis.title.y = element_text(colour = "purple", size =rel(2)),
-	axis.text.y = element_text(angle = 0, size = 13, vjust = 0.5))
 
-ggsave("outputs/Sex_Sat.png")
-  
+#Body condition factor is BCF = ((body weight(g) - gut content(g)) / length(cm)^3) *100.
+
+```{r Site_BCF}
+library(readr)
+Site_BCF <- read_csv("data/Site_BCF.csv")
 ```
-#Body condition factor is CF = ((body weight(g) - gut content(g)) / length(cm)3) *100.
 
-```{r Binomial}
-Site <- read.delim("data/Site_BodyConditionFactor.csv")
+
+```{r Histogram}
+ggplot(Site_BCF, aes(x = Body_Condition_Factor)) +
+	geom_histogram(binwidth = 1) +
+	facet_wrap(~ Site, ncol = 3) +
+	theme_bw()
+```
+
+
+```{r Data}
+library(readr)
+Site_BodyConditionFactor <- read_csv("data/Site_BodyConditionFactor.csv")
+```
+
+# Now looking into Binary Data
+```{r Scatter}
 ggplot(Site_BodyConditionFactor,aes(Body_Condition_Factor,Site_Location)) +
   geom_point() +
   geom_smooth() +
@@ -56,9 +55,21 @@ ggplot(Site_BodyConditionFactor,aes(Body_Condition_Factor,Site_Location)) +
   labs(title="Raw Fit: 1=Wall Branch, 0=Dry Fork")
 ```
 
-```{r rescale binary data}
-Site_BodyConditionFactor$Body_Condition_Factor100 <- Site_BodyConditionFactor$Body_Condition_Factor/100
-fit.1 <- glm(Site_Location~Body_Condition_Factor100, data=Site_BodyConditionFactor, binomial(link="logit"))
+
+
+# Before we fit the GLM we can avoid inconveniently small coefficient values by rescaling distance in hundreds of meters.
+
+```{r Tranformed Data}
+Site_BodyConditionFactor$BCF100 <- Site_BodyConditionFactor$Body_Condition_Factor/100
+
+```
+
+```{r fit.1}
+fit.1 <- glm(Site_Location~BCF100, data=Site_BodyConditionFactor, binomial(link="logit"))
+```
+
+
+```{r autplotfit.1}
 autoplot(fit.1)
 ```
 
@@ -68,24 +79,37 @@ x <- predict(fit.1)
 y <- resid(fit.1)
 binnedplot(x, y)
 ```
+
 ```{r coeff}
 coef(fit.1)
 ```
+
 ```{r coefint}
 confint(fit.1)
 ```
+
 ```{r Binary_Data_Site_BCF}
 ggplot(Site_BodyConditionFactor, aes(Body_Condition_Factor,Site_Location)) +
   geom_point() +
   geom_smooth(method="glm", method.args=list(family="binomial"(link="logit"))) + 
   xlab ("Body Condition Factor") +
-  ylab ("Site")
+  ylab ("Site") +
+  labs (title="Raw Fit: 1=Wall Branch, 0=Dry Fork")
 ```
+
+
+![Figure 1. Length Measurements](images/SRBD.jpeg)
+
+
+
+![Figure 2. Fathead Minnow Gonads (Testes)](images/gonads.jpg)
+
 
 ```{r import GSI_Area}
 library(readr)
-GSI_RedColoration_Area <- read_csv("data/GSI_RedColorationArea.csv")
+GSI_RedColorationArea <- read_csv("data/GSI_RedColorationArea.csv")
 ```
+
 
 ```{r scatter plot GSI_RedColorationArea}
 ggplot(data = GSI_RedColorationArea, aes(x=GSI_Value, y=Red_Coloration_Area)) +
@@ -94,8 +118,6 @@ geom_point()+
 	ylab("Red Coloration %") +
 theme_bw()+
 geom_smooth(method=lm)
-
-
 ggsave("outputs/ScatterGSI_Area.png")
 ```
 
@@ -109,40 +131,157 @@ summary(FitGSI_Area)
 ```{r autoplotlm}
 autoplot(FitGSI_Area)
 ```
+
+```{r Anova}
+anova(FitGSI_Area)
+
+```
+
 ```{r boxcox}
 boxcox(FitGSI_Area)
+# #see linear regression for FitGSI_Area
 ```
+#The R output for the boxcox() function plots the maximum likelihood surface (the curve) together with a maximum likelihood-based 95% CI (Hector, 2015)
+
+
+#Helpful GLM component info from Hector, 2015 Ch8 
 
 #GLMs have three components:
-#a linear predictor
-#a variance function
-#a link function.
+# 1.) a linear predictor- is what comes after the tilde (~) in our linear model formula
+# 2.) a variance function - models the variation in the data;make use of a much wider rangefamily of distributions including the poisson, the binomial, and the gamma. 
+#3.) a link function- plays a role equivalent to the transformation in normal least squares models. However, rather than transforming the data we transform the predictions made by the linear predictor. Commonly used link functions include the log, square root, and logistic.
 
-```{r GLM}
-GLM_GSI_Area <- glm(Red_Coloration_Area~GSI_Value, data= GSI_RedColorationArea, family= gaussian(link=)) 
+```{r GLM default gaussian link}
+GLMGSI_Area <- glm(Red_Coloration_Area~GSI_Value, data= GSI_RedColorationArea, family= gaussian(link=)) 
 ```
 
+```{r Plotting GLM Gaussian}
+ggplot(GSI_RedColorationArea,aes(GSI_Value,Red_Coloration_Area)) +
+  geom_point() +
+  geom_smooth(method="glm",colour="red",
+                       method.args=list(family="gaussian"(link=)))+
+  labs(title="GLM, Gaussian")
+
+```
+
+```{r GLM autoplot}
+autoplot(GLMGSI_Area)
+```
 
 ```{r ANOVA}
-anova(GLM_GSI_Area)
-
-
+anova(GLMGSI_Area)
 ```
-```{r GLM Output} 
-GSI_Area_Gamma <- glm(Red_Coloration_Area~GSI_Value, data= GSI_RedColorationArea, family=Gamma(link= )) 
+```{r summary default guassian link}
+summary(GLMGSI_Area)
+```
+#log data with Gaussian
+
+
+```{r gaussian_log}
+gaussianlog <- glm(Red_Coloration_Area~GSI_Value, data= GSI_RedColorationArea, family= gaussian(link=log)) 
 ```
 
-```{r summary}
-summary(GSI_Area_Gamma)
-```
-
-```{r glm}
+```{r Plotting Gaussian Log}
 ggplot(GSI_RedColorationArea,aes(GSI_Value,Red_Coloration_Area)) +
-  geom_point() + 
-  geom_smooth(method=,colour=, method.args=list(family=link=\sqrt))+ 
-  labs(title=GLM, square-root, Gamma Variance)
-                                                                                                                                            
+  geom_point() +
+  geom_smooth(method="glm",colour="red",
+                       method.args=list(family="gaussian"(link=log)))+
+  labs(title="GLM Log, Gaussian")
+
 ```
+
+
+```{r anova Gaussian_Log}
+anova(gaussianlog)
+```
+
+```{r summary gaussian log}
+summary(gaussianlog)
+```
+# Family: Gamma
+
+```{r Gamma}
+gamma <- glm(Red_Coloration_Area~GSI_Value, data= GSI_RedColorationArea, family=Gamma(link= )) 
+```
+
+```{r Plotting_Gamma}
+ggplot(GSI_RedColorationArea,aes(GSI_Value,Red_Coloration_Area)) +
+  geom_point() +
+  geom_smooth(method="glm",colour="red",
+                       method.args=list(family="Gamma"(link=)))+
+  labs(title="GLM, Gamma Variance")
+
+```
+
+```{r anova_gamma}
+anova(gamma)
+```
+
+```{r Summary_Gamma}
+summary(gamma)
+
+```
+
+```{r Gamma_sqrt}
+gamma_sqrt <- glm(Red_Coloration_Area~GSI_Value, data= GSI_RedColorationArea, family=Gamma(link= "sqrt"))
+
+```
+
+
+```{r Plotting Gamma_sqrt}
+ggplot(GSI_RedColorationArea,aes(GSI_Value,Red_Coloration_Area)) +
+  geom_point() +
+  geom_smooth(method="glm",colour="red",
+                       method.args=list(family="Gamma"(link="sqrt")))+
+  labs(title="GLM, square-root link, Gamma variance")
+
+```
+
+```{r summary of link_sqrt}
+summary(gamma_sqrt)
+
+```
+
+```{r coef_Gammasqrt}
+coef(gamma_sqrt)
+```
+
+```{r confint_Gammasqrt}
+confint(gamma_sqrt)
+```
+```{r Gamma_log}
+gammalog <- glm(Red_Coloration_Area~GSI_Value, data= GSI_RedColorationArea, family=Gamma(link= "log"))
+```
+
+```{r Plotting Gamma_log}
+ggplot(GSI_RedColorationArea,aes(GSI_Value,Red_Coloration_Area)) +
+  geom_point() +
+  geom_smooth(method="glm",colour="red",
+                       method.args=list(family="Gamma"(link="log")))+
+  labs(title="GLM, log link, Gamma variance")
+
+```
+
+
+
+```{r Anova log}
+anova(gammalog)
+```
+
+```{r summary of link_log}
+summary(gammalog)
+
+```
+
+```{r coef_Gammalog}
+coef(gammalog)
+```
+
+```{r confint_Gammalog}
+confint(gammalog)
+```
+
+
 
 ```{r SRBD Site Map}
 leaflet() %>%
@@ -162,14 +301,8 @@ leaflet() %>%
   addMarkers(-87.287965, 36.499277 , popup = "Rotary Park, Wall Branch Creek System")
 ```
 
-```{r image}
-![Figure 1. Southern Redbelly Dace in Full Breeding Coloration (*Chrosomus erythrogaster*)](images/SouthernRedbellyDace.png)
-```
 
-```{r image}
-![Figure 2. Length Measurements](images/SRBD.jpeg)
-```
+![Figure 3. Southern Redbelly Dace in Full Breeding Coloration (*Chrosomus erythrogaster*)](images/SouthernRedbellyDace.png)
 
-```{r image}
-![Figure 3. Fathead Minnow Gonads (Testes)](images/gonads.jpg)
-```
+
+
