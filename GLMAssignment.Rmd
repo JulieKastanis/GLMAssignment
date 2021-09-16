@@ -1,5 +1,5 @@
 ---
-title: "GLMAssignment"
+title: "GLM Assignment"
 output: html_document
 ---
 
@@ -16,13 +16,6 @@ library(ggplot2)
 library(data.table)
 library(ggfortify)
 ```
-## R Markdown
-t.test
-This is an R Markdown document. Markdown is a simple formatting syntax for authoring HTML, PDF, and MS Word documents. For more details on using R Markdown see <http://rmarkdown.rstudio.com>.
-
-
-<span style="color:blue">First, lets make a simple graph using some base R code.</span>
-
 
 #Body condition factor is BCF = ((body weight(g) - gut content(g)) / length(cm)^3) *100.
 
@@ -30,13 +23,15 @@ This is an R Markdown document. Markdown is a simple formatting syntax for autho
 library(readr)
 Site_BCF <- read_csv("data/Site_BCF.csv")
 ```
-
-
-```{r Histogram}
-ggplot(Site_BCF, aes(x = Body_Condition_Factor)) +
-	geom_histogram(binwidth = 1) +
-	facet_wrap(~ Site, ncol = 3) +
-	theme_bw()
+```{r Binomial}
+ggplot(Site_BCF,aes(Body_Condition_Factor,Site)) +
+  geom_point() +
+  geom_smooth(method="glm", method.args=list(family="binomial"(link="logit")))+
+  geom_hline(yintercept = mean(Site_BCF$Site), linetype = "dashed") +
+  labs(title="GLM, binomial count (DF/WB)")
+```
+```{r Binomial_m1}
+fit.1 <- glm(Site_Location~Body_Condition_Factor, data=Site_BCF, binomial(link="logit"))
 ```
 
 
@@ -45,7 +40,7 @@ library(readr)
 Site_BodyConditionFactor <- read_csv("data/Site_BodyConditionFactor.csv")
 ```
 
-# Now looking into Binary Data
+# Binary Data
 ```{r Scatter}
 ggplot(Site_BodyConditionFactor,aes(Body_Condition_Factor,Site_Location)) +
   geom_point() +
@@ -97,6 +92,19 @@ ggplot(Site_BodyConditionFactor, aes(Body_Condition_Factor,Site_Location)) +
   labs (title="Raw Fit: 1=Wall Branch, 0=Dry Fork")
 ```
 
+```{r Reverse}
+invlogit <- function(x) {1 / ( 1+exp(-x) ) } 
+invlogit(coef(fit.1)) 
+```
+
+```{r ReverseLogitSummary}
+summary(fit.1)
+```
+```{r cofint_invLogit}
+confint(fit.1)
+```
+#The Binary Data of the two sites (Wall Branch and Dry Fork) shows a negative #effect of Body Condition Factor
+
 
 ![Figure 1. Length Measurements](images/SRBD.jpeg)
 
@@ -125,16 +133,17 @@ ggsave("outputs/ScatterGSI_Area.png")
 ```{r Fit lm GSI_Area}
 
 FitGSI_Area <- lm(data= GSI_RedColorationArea, Red_Coloration_Area~GSI_Value)
-summary(FitGSI_Area)
+
 
 ```
+
 ```{r autoplotlm}
 autoplot(FitGSI_Area)
 ```
 
 ```{r Anova}
 anova(FitGSI_Area)
-
+summary(FitGSI_Area)
 ```
 
 ```{r boxcox}
@@ -276,6 +285,8 @@ summary(gammalog)
 ```{r coef_Gammalog}
 coef(gammalog)
 ```
+# tells you for every one unit increase in GSI, there is 2.65 increase in Coloration Area %
+
 
 ```{r confint_Gammalog}
 confint(gammalog)
