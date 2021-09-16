@@ -52,7 +52,7 @@ ggplot(Site_BodyConditionFactor,aes(Body_Condition_Factor,Site_Location)) +
 
 
 
-# Before we fit the GLM we can avoid inconveniently small coefficient values by rescaling distance in hundreds of meters.
+# Rescaling body condition values in hundreds of meters.
 
 ```{r Tranformed Data}
 Site_BodyConditionFactor$BCF100 <- Site_BodyConditionFactor$Body_Condition_Factor/100
@@ -92,17 +92,21 @@ ggplot(Site_BodyConditionFactor, aes(Body_Condition_Factor,Site_Location)) +
   labs (title="Raw Fit: 1=Wall Branch, 0=Dry Fork")
 ```
 
-```{r Reverse}
+```{r invfunction}
 invlogit <- function(x) {1 / ( 1+exp(-x) ) } 
 invlogit(coef(fit.1)) 
 ```
 
-```{r ReverseLogitSummary}
-summary(fit.1)
-```
+
 ```{r cofint_invLogit}
 confint(fit.1)
 ```
+
+```{r summary_invlogit}
+summary(fit.1)
+```
+#For the summary table, we see the binary data has a negative effect on BFC100 
+
 #The Binary Data of the two sites (Wall Branch and Dry Fork) shows a negative #effect of Body Condition Factor
 
 
